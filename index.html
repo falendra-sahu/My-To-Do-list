@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modern Todo List</title>
+    <title>Todo List</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -50,7 +50,7 @@
             border-radius: 30px 0 0 30px;
             font-size: 16px;
             outline: none;
-            min-width: 0; /* Add this line */
+            min-width: 0;
         }
         button {
             padding: 10px 20px;
@@ -61,7 +61,7 @@
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s ease;
-            white-space: nowrap; /* Add this line */
+            white-space: nowrap;
         }
         button:hover {
             background-color: #5a6fd6;
@@ -121,7 +121,6 @@
             margin-top: 20px;
         }
 
-        /* Responsive styles */
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -136,7 +135,7 @@
                 padding: 10px;
             }
             form {
-                flex-wrap: nowrap; /* Add this line */
+                flex-wrap: nowrap;
             }
         }
 
@@ -158,7 +157,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>My Todo List</h1>
+        <h1>My To-Do List</h1>
         <form onsubmit="return false;">
             <input type="text" id="newTask" placeholder="Add a new task">
             <button onclick="addTask()">Add</button>
@@ -175,7 +174,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -192,18 +191,6 @@
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
-
-        // Load tasks from Firebase
-        async function loadTasks() {
-            const todoList = document.getElementById("todoList");
-            todoList.innerHTML = '';
-            const querySnapshot = await getDocs(collection(db, "tasks"));
-            querySnapshot.forEach((doc) => {
-                const task = doc.data();
-                const li = createTaskElement(task.text, task.completed, doc.id);
-                todoList.appendChild(li);
-            });
-        }
 
         // Create task element
         function createTaskElement(text, completed, id) {
@@ -224,13 +211,10 @@
             const newTaskInput = document.getElementById("newTask");
             const text = newTaskInput.value.trim();
             if (text !== "") {
-                const docRef = await addDoc(collection(db, "tasks"), {
+                await addDoc(collection(db, "tasks"), {
                     text: text,
                     completed: false
                 });
-                const li = createTaskElement(text, false, docRef.id);
-                const todoList = document.getElementById("todoList");
-                todoList.insertBefore(li, todoList.firstChild);
                 newTaskInput.value = "";
             }
         }
@@ -240,17 +224,23 @@
             await updateDoc(doc(db, "tasks", id), {
                 completed: checkbox.checked
             });
-            checkbox.parentElement.classList.toggle("completed");
         }
 
         // Delete task
         window.deleteTask = async function(id) {
             await deleteDoc(doc(db, "tasks", id));
-            document.querySelector(`[onclick="deleteTask('${id}')"]`).parentElement.remove();
         }
 
-        // Load tasks when the page loads
-        loadTasks();
+        // Real-time listener
+        onSnapshot(collection(db, "tasks"), (snapshot) => {
+            const todoList = document.getElementById("todoList");
+            todoList.innerHTML = '';
+            snapshot.forEach((doc) => {
+                const task = doc.data();
+                const li = createTaskElement(task.text, task.completed, doc.id);
+                todoList.appendChild(li);
+            });
+        });
 
         // Prevent zoom on double tap
         document.addEventListener('touchstart', function(event) {
