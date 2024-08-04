@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>To-do List</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            touch-action: manipulation;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #4a4a4a;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 30px 0 0 30px;
+            font-size: 16px;
+            outline: none;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #667eea;
+            color: white;
+            border: none;
+            border-radius: 0 30px 30px 0;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #5a6fd6;
+        }
+        ul {
+            list-style-type: none;
+        }
+        li {
+            background-color: #fff;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+        li:hover {
+            background-color: #f8f8f8;
+        }
+        input[type="checkbox"] {
+            margin-right: 15px;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+        }
+        input[type="checkbox"]:checked::before {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #667eea;
+            font-size: 14px;
+        }
+        li.completed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        .delete-btn {
+            margin-left: auto;
+            color: #ff6b6b;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .delete-btn:hover {
+            color: #ff4757;
+        }
+        footer {
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>My To-do List</h1>
+        <form onsubmit="return false;">
+            <input type="text" id="newTask" placeholder="Add a new task">
+            <button onclick="addTask()">Add</button>
+        </form>
+        <ul id="todoList">
+            <!-- Tasks will be added here dynamically -->
+        </ul>
+    </div>
+    <footer>
+        Powered by Falendra Sahu
+    </footer>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCldxt0mdXWTSOXFMm8psqkCzsGXvFr1Zk",
+            authDomain: "to-do-list-74a64.firebaseapp.com",
+            projectId: "to-do-list-74a64",
+            storageBucket: "to-do-list-74a64.appspot.com",
+            messagingSenderId: "654559770213",
+            appId: "1:654559770213:web:c9b634dce07352b056b88c",
+            measurementId: "G-DQNX1CNN70"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // Load tasks from Firebase
+        async function loadTasks() {
+            const todoList = document.getElementById("todoList");
+            todoList.innerHTML = '';
+            const querySnapshot = await getDocs(collection(db, "tasks"));
+            querySnapshot.forEach((doc) => {
+                const task = doc.data();
+                const li = createTaskElement(task.text, task.completed, doc.id);
+                todoList.appendChild(li);
+            });
+        }
+
+        // Create task element
+        function createTaskElement(text, completed, id) {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <input type="checkbox" ${completed ? 'checked' : ''} onchange="toggleCompleted('${id}', this)">
+                ${text}
+                <i class="fas fa-trash delete-btn" onclick="deleteTask('${id}')"></i>
+            `;
+            if (completed) {
+                li.classList.add("completed");
+            }
+            return li;
+        }
+
+        // Add task
+        window.addTask = async function() {
+            const newTaskInput = document.getElementById("newTask");
+            const text = newTaskInput.value.trim();
+            if (text !== "") {
+                const docRef = await addDoc(collection(db, "tasks"), {
+                    text: text,
+                    completed: false
+                });
+                const li = createTaskElement(text, false, docRef.id);
+                const todoList = document.getElementById("todoList");
+                todoList.insertBefore(li, todoList.firstChild);
+                newTaskInput.value = "";
+            }
+        }
+
+        // Toggle completed
+        window.toggleCompleted = async function(id, checkbox) {
+            await updateDoc(doc(db, "tasks", id), {
+                completed: checkbox.checked
+            });
+            checkbox.parentElement.classList.toggle("completed");
+        }
+
+        // Delete task
+        window.deleteTask = async function(id) {
+            await deleteDoc(doc(db, "tasks", id));
+            document.querySelector(`[onclick="deleteTask('${id}')"]`).parentElement.remove();
+        }
+
+        // Load tasks when the page loads
+        loadTasks();
+
+        // Prevent zoom on double tap
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
